@@ -7,6 +7,10 @@
 
 ![ミッションしりとりのトップ画面](docs/screenshot.webp)
 
+> **Vibe Coding で開発しました。** MVP仕様（v3）と拡張仕様（v4）を人間が先に文書化し、
+> 実装は **Claude Code** と **Codex** が担当しています。仕様書はリポジトリ内の
+> [v3](mission-shiritori-spec-v3-mvp.md) / [v4](mission-shiritori-spec-v4-extensions.md) にあります。
+
 Next.js / TypeScript で実装した、ミッション制のしりとりゲームです。日本語正規化、サーバー側のルール判定、日替わりチャレンジ、リプレイ、テストを一つの小規模アプリとしてまとめています。
 
 ## この実装の見どころ
@@ -20,6 +24,7 @@ Next.js / TypeScript で実装した、ミッション制のしりとりゲー�
 | ログインなしの状態管理 | HMAC署名付きHttpOnly CookieにゲストIDとステージ解放進捗を保存 |
 | 再現性 | HMACシードで全プレイヤー共通のデイリーミッションを生成（Asia/Tokyo基準） |
 | ロジックの分離 | ゲームルールを`lib/game`に隔離し、Route HandlerとUIは呼び出しのみ。Vitestで正規化・辞書・ミッション・進行を検証 |
+| AIの使い方 | 辞書の語彙分類にAIをオフラインで使い、結果をJSONに固定。ゲーム実行時にAI APIは呼ばず、生成AIの不安定さをランタイムに持ち込まない |
 
 ## 起動
 
