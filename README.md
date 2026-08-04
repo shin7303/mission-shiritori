@@ -1,10 +1,25 @@
 # ミッションしりとり
 
-60秒で言葉をつなぎ、ミッションを攻略するしりとりゲームです。ログインなしで遊べます。
+**19万語の辞書とサーバー側ルール判定で動く、60秒のしりとりゲームです。ログイン不要。**
 
-公開デモ: [mission-shiritori.vercel.app](https://mission-shiritori.vercel.app)
+[![デモを触る](https://img.shields.io/badge/demo-mission--shiritori.vercel.app-c14b3f?style=for-the-badge)](https://mission-shiritori.vercel.app)
+[![ポートフォリオ](https://img.shields.io/badge/portfolio-shin7303.github.io-14181f?style=for-the-badge)](https://shin7303.github.io)
+
+![ミッションしりとりのトップ画面](docs/screenshot.webp)
 
 Next.js / TypeScript で実装した、ミッション制のしりとりゲームです。日本語正規化、サーバー側のルール判定、日替わりチャレンジ、リプレイ、テストを一つの小規模アプリとしてまとめています。
+
+## この実装の見どころ
+
+| 観点 | やったこと |
+| --- | --- |
+| 日本語処理 | NFKC・カタカナ→ひらがな・小書き文字・長音を正規化し、SudachiDict-fullから抽出した19万語規模の名詞コーパスと照合 |
+| サーバー権威の設計 | 接続・重複・「ん」終了・時間切れの判定とスコア計算をすべてAPI側に置き、クライアントからの加点を成立させない |
+| 冪等性 | `clientMoveId`により、通信リトライで同じ手が二重加点されない |
+| データ駆動 | 17種のミッション（開始文字・速度・順序・制約）を定義データで表現。ロジックを変えずに追加できる |
+| ログインなしの状態管理 | HMAC署名付きHttpOnly CookieにゲストIDとステージ解放進捗を保存 |
+| 再現性 | HMACシードで全プレイヤー共通のデイリーミッションを生成（Asia/Tokyo基準） |
+| ロジックの分離 | ゲームルールを`lib/game`に隔離し、Route HandlerとUIは呼び出しのみ。Vitestで正規化・辞書・ミッション・進行を検証 |
 
 ## 起動
 
@@ -38,7 +53,7 @@ Vercelで公開する場合は、Production環境に両方を登録してから�
 ## 実装したMVP
 
 - カタカナ→ひらがな・NFKC・小書き文字を扱う日本語正規化
-- 国名・都道府県・主要地名に加え、IPADIC から抽出した10万語超の一般名詞コーパスによる辞書照合
+- 国名・都道府県・主要地名に加え、SudachiDict-full から抽出した19万語規模の名詞コーパスによる辞書照合
 - 接続、重複、「ん」終了、時間切れのサーバー判定
 - 文字数・カテゴリ・末尾文字・単語数の4種のデータ駆動ミッション
 - ミッション達成・同時達成・終了ボーナスのサーバー側スコア計算
@@ -70,10 +85,10 @@ Vercelで公開する場合は、Production環境に両方を登録してから�
 
 - CIではテスト、Lint、本番ビルドを実行します。
 - 本リポジトリにはライセンスを付与していません。コードの再利用・再配布は許可されません。
-- IPADIC由来の辞書データには別途条件があります。詳細は `THIRD_PARTY_NOTICES.md` を参照してください。
+- SudachiDict由来の辞書データには別途条件があります。詳細は `THIRD_PARTY_NOTICES.md` を参照してください。
 
 ## 辞書データ
 
-日常語は IPADIC の原データから、一般名詞・サ変接続名詞・形容動詞語幹・地名だけを自動抽出しています。読みを持つ品詞付きコーパスを採用することで、生成AIによる不自然な語や読み誤りを避けています。生成手順は `scripts/build-ipadic-dictionary.mjs`、ライセンス表記は `THIRD_PARTY_NOTICES.md` にあります。
+日常語は SudachiDict-full（`small_lex` / `core_lex` / `notcore_lex`）の原データから、普通名詞と、収録が絞り込まれた `small_lex` の地名・固有名詞、および国名だけを自動抽出しています。読みを持つ品詞付きコーパスを採用することで、生成AIによる不自然な語や読み誤りを避けています。原データは[配布サイト](http://sudachi.s3-website-ap-northeast-1.amazonaws.com/sudachidict-raw/)から取得し、展開先を `SUDACHI_SOURCE_DIR` に渡して `node scripts/build-sudachi-dictionary.mjs` を実行します。ライセンス表記は `THIRD_PARTY_NOTICES.md` にあります。
 
-カテゴリは、既存の人手登録に加え、Gemini 3.6 Flash によるオフライン分類結果を `lib/game/data/ipadic-categories.json` へ保存します。ゲーム実行時にAI APIは呼びません。追加分類は `node scripts/classify-ipadic-with-agy.mjs --limit=200` で小分けに実行でき、曖昧語は未分類のまま残す方針です。
+カテゴリは、既存の人手登録に加え、Gemini 3.6 Flash によるオフライン分類結果を `lib/game/data/sudachi-categories.json` へ保存します。ジャンルは動物・食べ物・植物・道具・場所・体・乗り物・衣類・スポーツ・音楽・自然・職業・建物の13種です。ゲーム実行時にAI APIは呼びません。追加分類は `node scripts/classify-sudachi-with-agy.mjs --limit=200` で小分けに実行でき、曖昧語は未分類のまま残す方針です。ゲームに載せるべきでないと判定された語は `lib/game/data/sudachi-blocked.json` に記録し、辞書から除外します。
